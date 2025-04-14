@@ -202,7 +202,24 @@ def download_preview_with_url(track_url, track_id):
     return composite_image
 
 
-def convert_audio_to_composite_image(filepath_to_audio, image_size=(128,512), n_mels=128, fmax=8000,):
+def analyze_mood_from_features(mel, mfcc, chroma):
+    """Analyze audio features to determine mood"""
+    # Calculate mood indicators
+    energy = np.mean(mel)  # Higher = more energetic
+    brightness = np.mean(mfcc[:20])  # Higher = brighter
+    harmonicity = np.mean(chroma)  # Higher = more harmonic
+    
+    # Classify mood based on feature combinations
+    if energy > 0.6 and brightness > 0.5:
+        return 'energetic'
+    elif harmonicity > 0.7 and energy < 0.4:
+        return 'calm' 
+    elif brightness < 0.4 and harmonicity < 0.5:
+        return 'sad'
+    else:
+        return 'happy'
+
+def convert_audio_to_composite_image(filepath_to_audio, image_size=(128,512), n_mels=128, fmax=8000, return_mood=False):
     
     signal, sr = librosa.load(filepath_to_audio)
     
@@ -220,5 +237,9 @@ def convert_audio_to_composite_image(filepath_to_audio, image_size=(128,512), n_
     chroma_image = resize(chromagram*255, (128,512)).astype(np.uint8)
     
     composite = np.dstack((mel_image, mfcc_image, chroma_image))
-
-    return composite
+    
+    if return_mood:
+        mood = analyze_mood_from_features(mel_image, mfcc_image, chroma_image)
+        return composite, mood
+    else:
+        return composite

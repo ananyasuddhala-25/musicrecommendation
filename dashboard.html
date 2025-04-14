@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MusicRec Dashboard</title>
+    <link href="[https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"](https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css") rel="stylesheet">
+    <link rel="stylesheet" href="static/styles.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">MusicRec</a>
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="#dashboard">Songs</a></li>
+                <li class="nav-item"><a class="nav-link" href="#favorites">Favorite Songs</a></li>
+                <li class="nav-item"><a class="nav-link" href="#moodbot">MoodBot</a></li>
+                <li class="nav-item"><a class="nav-link" href="#story">Story Engine</a></li>
+                <li class="nav-item"><button class="btn btn-outline-light" id="logoutBtn">Logout</button></li>
+            </ul>
+        </div>
+    </nav>
+    <main class="container mt-4">
+        <!-- Songs Section -->
+        <section id="dashboard-section">
+            <h2>Songs</h2>
+            <div id="songs-list" class="row"></div>
+        </section>
+        <!-- Favorites Section -->
+        <section id="favorites-section" class="d-none">
+            <h2>Your Favorite Songs</h2>
+            <div id="favorites-list" class="row"></div>
+        </section>
+        <!-- MoodBot Section -->
+        <section id="moodbot-section" class="d-none">
+            <h2>Chat with MoodBot</h2>
+            <div id="moodbot-chat" class="mb-3"></div>
+            <form id="moodbot-form" class="input-group mb-3">
+                <input type="text" id="moodbot-input" class="form-control" placeholder="How are you feeling?">
+                <button class="btn btn-primary" type="submit">Send</button>
+            </form>
+            <div id="moodbot-recommendations" class="row"></div>
+        </section>
+        <!-- Story Engine Section -->
+        <section id="story-section" class="d-none">
+            <h2>Story Engine</h2>
+            <div id="story-song-list" class="mb-3"></div>
+            <button class="btn btn-success mb-3" id="generate-story-btn">Generate Story</button>
+            <div id="story-output"></div>
+        </section>
+    </main>
+    <script src="static/dashboard.js"></script>
+    <script src="static/animated_story.js"></script>
+</body>
+</html>

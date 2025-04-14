@@ -305,25 +305,111 @@ class LatentSpace:
         ax.imshow(prediction[0])
         plt.tight_layout()
         plt.show()
+# ...existing imports...
 
-    def search_for_recommendations(self, query, num=10, popularity_threshold=10, get_time_and_freq=False):
-        id_ = self._spotify.search(query, type='track')['tracks']['items'][0]['id']
-        track = self._spotify.track(id_)
-        link = track['preview_url']
-        print(track['name'])
-        print(track['artists'][0]['name'])
-        print(link)
 
-        if link is not None:
+    def get_similar_songs_by_mode(self, query, mode, num=10, popularity_threshold=0, get_time_and_freq=False):
+        """Search for songs with mode-based filtering."""
+        if mode == 'artist':
+            # Find similar artists first, then their songs
+            artist_results = self._spotify.search(query, type='artist', limit=1)
+            if not artist_results['artists']['items']:
+                print("No artist found for the query.")
+                return []
 
-            vector = self.get_vector_from_preview_link(link, id_)
-            similarity = self.get_similarity(vector, self.tracks, subset=self.latent_cols, num=num, popularity_threshold=popularity_threshold)
-            if get_time_and_freq:
-                similarity['time_similarity'] = self.get_similarity(vector, similarity, subset=self.latent_cols[:len(self.latent_cols)//2], num=num, popularity_threshold=popularity_threshold, sort_tracks=False)['similarity']
-                similarity['frequency_similarity'] = self.get_similarity(vector, similarity, subset=self.latent_cols[len(self.latent_cols)//2:], num=num, popularity_threshold=popularity_threshold, sort_tracks=False)['similarity']
-            
-                return similarity[['track_name','track_uri','artist_name','similarity','track_popularity','time_similarity','frequency_similarity']]
+            artist_id = artist_results['artists']['items'][0]['id']
+            artist_name = artist_results['artists']['items'][0]['name']
+            artist_vector = self.get_vector_by_name(artist_name, 'artist')
+
+            if artist_vector.empty:
+                print("No latent vector found for the artist.")
+                return []
+
+            similar_artists = self.get_similarity(
+                artist_vector,
+                self.artists,
+                subset=self.latent_cols,
+                num=50
+            )
+
+            # Get tracks from similar artists
+            tracks = pd.DataFrame()
+            for similar_artist_id in similar_artists.artist_id:
+                tracks = pd.concat([tracks, self.get_index_by_artist_id(similar_artist_id)])
+
+            return tracks.head(num).to_dict('records')
+
+        elif mode == 'genre':
+            # Find similar genres first
+            genre_vector = self.get_vector_by_name(query, 'genre')
+            if genre_vector.empty:
+                print("No latent vector found for the genre.")
+                return []
+
+            similar_genres = self.get_similarity(
+                genre_vector,
+                self.genres,
+                subset=self.latent_cols,
+                num=50
+            )
+
+            # Get tracks from similar genres
+            tracks = pd.DataFrame()
+            for genre in similar_genres.genre:
+                genre_tracks = self.tracks[self.tracks.artist_genres.apply(lambda x: genre in x)]
+                tracks = pd.concat([tracks, genre_tracks])
+
+            return tracks.head(num).to_dict('records')
+
+        elif mode == 'track':
+            # Find similar tracks based on a query
+            track_results = self._spotify.search(query, type='track', limit=1)
+            if not track_results['tracks']['items']:
+                print("No track found for the query.")
+                return []
+
+            track_id = track_results['tracks']['items'][0]['id']
+            track = self._spotify.track(track_id)
+            link = track['preview_url']
+
+            print(f"Track: {track['name']} by {track['artists'][0]['name']}")
+            print(f"Preview URL: {link}")
+
+            if link is not None:
+                vector = self.get_vector_from_preview_link(link, track_id)
+                similarity = self.get_similarity(
+                    vector,
+                    self.tracks,
+                    subset=self.latent_cols,
+                    num=num,
+                    popularity_threshold=popularity_threshold
+                )
+
+                if get_time_and_freq:
+                    similarity['time_similarity'] = self.get_similarity(
+                        vector,
+                        similarity,
+                        subset=self.latent_cols[:len(self.latent_cols) // 2],
+                        num=num,
+                        popularity_threshold=popularity_threshold,
+                        sort_tracks=False
+                    )['similarity']
+
+                    similarity['frequency_similarity'] = self.get_similarity(
+                        vector,
+                        similarity,
+                        subset=self.latent_cols[len(self.latent_cols) // 2:],
+                        num=num,
+                        popularity_threshold=popularity_threshold,
+                        sort_tracks=False
+                    )['similarity']
+
+                    return similarity[['track_name', 'track_uri', 'artist_name', 'similarity', 'track_popularity', 'time_similarity', 'frequency_similarity']]
+
+                return similarity[['track_name', 'track_uri', 'artist_name', 'similarity', 'track_popularity']]
             else:
-                return similarity[['track_name','track_uri','artist_name','similarity','track_popularity']]
+                print("No preview available for the track.")
+                return []
+
         else:
-            print('No Preview Available. Try a different search.')
+            raise ValueError("Mode must be 'artist', 'genre', or 'track'.")
